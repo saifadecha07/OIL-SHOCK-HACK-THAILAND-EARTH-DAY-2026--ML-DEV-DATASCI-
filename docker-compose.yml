@@ -1,0 +1,28 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    container_name: shockwave-backend
+    ports:
+      - "8000:8000"
+    environment:
+      EIA_API_KEY: ${EIA_API_KEY:-YOUR_EIA_API_KEY}
+      POSTGRES_SERVER: ${POSTGRES_SERVER:-postgres}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-shockwave}
+      BACKEND_CORS_ORIGINS: '["http://localhost:8501","http://127.0.0.1:8501"]'
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
+    container_name: shockwave-frontend
+    depends_on:
+      - backend
+    ports:
+      - "8501:8501"
+    restart: unless-stopped

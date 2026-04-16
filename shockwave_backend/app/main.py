@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.endpoints.simulate import router as simulate_router
 from app.core.config import settings
 
 
@@ -21,3 +22,6 @@ app.add_middleware(
 @app.get("/health", tags=["health"])
 async def health_check() -> dict[str, str]:
     return {"status": "ok"}
+
+
+app.include_router(simulate_router, prefix=settings.api_v1_prefix)
