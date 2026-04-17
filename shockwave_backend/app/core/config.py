@@ -9,12 +9,13 @@ class Settings(BaseSettings):
     project_name: str = "SHOCKWAVE Backend"
     api_v1_prefix: str = "/api/v1"
     debug: bool = False
+    allow_mock_model: bool = Field(True, alias="ALLOW_MOCK_MODEL")
 
-    postgres_server: str = Field(..., alias="POSTGRES_SERVER")
+    postgres_server: str = Field("localhost", alias="POSTGRES_SERVER")
     postgres_port: int = Field(5432, alias="POSTGRES_PORT")
-    postgres_user: str = Field(..., alias="POSTGRES_USER")
-    postgres_password: str = Field(..., alias="POSTGRES_PASSWORD")
-    postgres_db: str = Field(..., alias="POSTGRES_DB")
+    postgres_user: str = Field("postgres", alias="POSTGRES_USER")
+    postgres_password: str = Field("postgres", alias="POSTGRES_PASSWORD")
+    postgres_db: str = Field("shockwave", alias="POSTGRES_DB")
 
     backend_cors_origins: list[AnyHttpUrl] | list[str] = Field(
         default_factory=list,
@@ -37,6 +38,11 @@ class Settings(BaseSettings):
             f"{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_server}:{self.postgres_port}/{self.postgres_db}"
         )
+
+    @computed_field
+    @property
+    def safe_cors_origins(self) -> list[str]:
+        return [str(origin) for origin in self.backend_cors_origins if str(origin).strip() != "*"]
 
     @classmethod
     def settings_customise_sources(

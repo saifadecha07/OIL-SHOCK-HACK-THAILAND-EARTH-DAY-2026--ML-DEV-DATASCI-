@@ -1,19 +1,64 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: shockwave-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-shockwave}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-shockwave}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  ml-trainer:
+    build:
+      context: .
+      dockerfile: ./ml_engine/Dockerfile
+    container_name: shockwave-ml-trainer
+    working_dir: /app
+    environment:
+      EIA_API_KEY: ${EIA_API_KEY:-YOUR_EIA_API_KEY}
+      DOEB_IMPORT_PATH: ${DOEB_IMPORT_PATH:-/app/ml_engine/data/raw/doeb_import.csv}
+      DOEB_DIESEL_PATH: ${DOEB_DIESEL_PATH:-/app/ml_engine/data/raw/doeb_diesel.csv}
+      EPPO_MONTHLY_PATH: ${EPPO_MONTHLY_PATH:-}
+      MODEL_COUNTRY: ${MODEL_COUNTRY:-Thailand}
+      EIA_START: ${EIA_START:-2014-01}
+      MAX_GRANGER_LAG: ${MAX_GRANGER_LAG:-6}
+      MAX_VAR_LAG: ${MAX_VAR_LAG:-12}
+      BACKTEST_STEPS: ${BACKTEST_STEPS:-3}
+      MIN_TRAINING_ROWS: ${MIN_TRAINING_ROWS:-36}
+    volumes:
+      - .:/app
+
   backend:
     build:
       context: .
       dockerfile: ./backend/Dockerfile
     container_name: shockwave-backend
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       EIA_API_KEY: ${EIA_API_KEY:-YOUR_EIA_API_KEY}
+      ALLOW_MOCK_MODEL: ${ALLOW_MOCK_MODEL:-true}
       POSTGRES_SERVER: ${POSTGRES_SERVER:-postgres}
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-shockwave}
       BACKEND_CORS_ORIGINS: '["http://localhost:8501","http://127.0.0.1:8501"]'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    working_dir: /app/shockwave_backend
     restart: unless-stopped
 
   frontend:
@@ -24,5 +69,11 @@ services:
     depends_on:
       - backend
     ports:
-      - "8501:8501"
+      - "127.0.0.1:8501:8501"
+    volumes:
+      - .:/app
+    working_dir: /app/frontend
     restart: unless-stopped
+
+volumes:
+  postgres-data:

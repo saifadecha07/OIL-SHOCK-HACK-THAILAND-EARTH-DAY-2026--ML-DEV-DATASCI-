@@ -5,7 +5,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app/frontend
 
+RUN useradd --create-home --shell /usr/sbin/nologin appuser
+
 COPY frontend /app/frontend
+
+RUN chown -R appuser:appuser /app
+
+USER appuser
 
 EXPOSE 8501
 

@@ -1,4 +1,19 @@
-const API_URL = "http://localhost:8000/api/v1/simulate";
+function resolveApiBaseUrl() {
+  const configuredBase = document
+    .querySelector('meta[name="shockwave-api-base"]')
+    ?.getAttribute("content")
+    ?.trim();
+
+  if (configuredBase) {
+    return configuredBase.replace(/\/$/, "");
+  }
+
+  const { protocol, hostname } = window.location;
+  return `${protocol}//${hostname}:8000`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
+const API_URL = `${API_BASE_URL}/api/v1/simulate`;
 
 const shockRange = document.getElementById("shockRange");
 const horizonRange = document.getElementById("horizonRange");
@@ -18,7 +33,8 @@ const shockSeveritySubtext = document.getElementById("shockSeveritySubtext");
 const importChart = document.getElementById("importChart");
 const dieselChart = document.getElementById("dieselChart");
 const forecastTableBody = document.querySelector("#forecastTable tbody");
-const HEALTH_URL = "http://localhost:8000/api/v1/simulate/health";
+const HEALTH_URL = `${API_BASE_URL}/api/v1/simulate/health`;
+const READY_URL = `${API_BASE_URL}/ready`;
 
 shockRange.addEventListener("input", () => {
   shockValue.textContent = `${shockRange.value}%`;
@@ -49,11 +65,35 @@ function formatNumber(value) {
 }
 
 function formatMonth(dateString) {
-  const date = new Date(dateString);
+  const date = new Date(`${dateString}T00:00:00`);
   return new Intl.DateTimeFormat("en", {
     month: "short",
     year: "numeric",
   }).format(date);
+}
+
+function clearChartFrame(frame) {
+  frame.classList.remove("empty-state");
+  frame.innerHTML = "";
+}
+
+function renderChartEmptyState(frame, title, copy) {
+  frame.classList.add("empty-state");
+  frame.innerHTML = `
+    <div>
+      <div class="empty-title">${title}</div>
+      <div class="empty-copy">${copy}</div>
+    </div>
+  `;
+}
+
+function resetSummaryCards() {
+  maxDropValue.textContent = "-";
+  maxDropSubtext.textContent = "Run a simulation";
+  criticalMonthValue.textContent = "-";
+  criticalMonthSubtext.textContent = "Delayed stress window";
+  shockSeverityValue.textContent = "-";
+  shockSeveritySubtext.textContent = "Awaiting scenario";
 }
 
 function computeInsights(forecasts, shockPercentage) {
@@ -91,7 +131,7 @@ function applyApiSummary(summary, shockPercentage) {
 }
 
 function renderImportChart(forecasts) {
-  importChart.classList.remove("empty-state");
+  clearChartFrame(importChart);
   const months = forecasts.map((row) => row.month);
 
   const traces = [
@@ -113,14 +153,14 @@ function renderImportChart(forecasts) {
     },
   ];
 
-  Plotly.newPlot(importChart, traces, baseLayout("Crude Oil Import Volume Forecast"), {
+  Plotly.react(importChart, traces, baseLayout("Crude Oil Import Volume Forecast"), {
     responsive: true,
     displayModeBar: false,
   });
 }
 
 function renderDieselChart(forecasts) {
-  dieselChart.classList.remove("empty-state");
+  clearChartFrame(dieselChart);
   const months = forecasts.map((row) => row.month);
 
   const traces = [
@@ -144,7 +184,7 @@ function renderDieselChart(forecasts) {
     },
   ];
 
-  Plotly.newPlot(dieselChart, traces, baseLayout("Diesel Sales Response Forecast"), {
+  Plotly.react(dieselChart, traces, baseLayout("Diesel Sales Response Forecast"), {
     responsive: true,
     displayModeBar: false,
   });
@@ -197,21 +237,51 @@ function renderTable(forecasts) {
   });
 }
 
+function renderTableEmptyState(message = "No scenario results yet.") {
+  forecastTableBody.innerHTML = `
+    <tr>
+      <td colspan="7" class="table-empty">${message}</td>
+    </tr>
+  `;
+}
+
+function resetDashboardState() {
+  resetSummaryCards();
+  renderChartEmptyState(importChart, "No simulation yet", "Import volume forecast will appear here.");
+  renderChartEmptyState(dieselChart, "No simulation yet", "Diesel sales forecast will appear here.");
+  renderTableEmptyState();
+}
+
 async function loadModelHealth() {
   try {
-    const response = await fetch(HEALTH_URL);
+    const [readyResponse, response] = await Promise.all([
+      fetch(READY_URL),
+      fetch(HEALTH_URL),
+    ]);
+
+    if (!readyResponse.ok) {
+      throw new Error("Readiness check failed.");
+    }
     if (!response.ok) {
       throw new Error("Health check failed.");
     }
 
+    const readiness = await readyResponse.json();
     const health = await response.json();
+    const modelModeText = health.status === "mock_ready" ? "mock simulator" : "trained VAR";
     modelMetaText.textContent =
       `Lag ${health.selected_lag_months} months | ${health.leading_indicators.join(", ")} | ` +
-      `${health.is_differenced ? "differenced" : "level"} VAR`;
-    setStatus("Model is online and ready for simulation.", "success");
+      `${health.status === "mock_ready" ? modelModeText : `${health.is_differenced ? "differenced" : "level"} VAR`}`;
+    setStatus(
+      health.status === "mock_ready"
+        ? `Backend is online in mock simulation mode. Database ${readiness.database.status}.`
+        : "Model is online and ready for simulation.",
+      "success",
+    );
   } catch (error) {
     console.error(error);
     modelMetaText.textContent = "Backend model status unavailable";
+    resetDashboardState();
     setStatus(
       "Backend is not reachable yet. Start FastAPI first, then refresh this page.",
       "error",
@@ -240,8 +310,11 @@ async function runSimulation() {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || "Simulation request failed.");
+      const errorPayload = await response.json().catch(async () => {
+        const errorText = await response.text();
+        return { detail: errorText || "Simulation request failed." };
+      });
+      throw new Error(errorPayload.detail || "Simulation request failed.");
     }
 
     const data = await response.json();
@@ -261,8 +334,9 @@ async function runSimulation() {
     setStatus("Simulation complete. Scenario outputs updated successfully.", "success");
   } catch (error) {
     console.error(error);
+    resetDashboardState();
     setStatus(
-      "Unable to complete the simulation. Confirm that the FastAPI backend is running at http://localhost:8000.",
+      `Unable to complete the simulation. ${error.message}`,
       "error",
     );
   } finally {
@@ -270,3 +344,5 @@ async function runSimulation() {
     runButton.textContent = "Run Simulation";
   }
 }
+
+resetDashboardState();

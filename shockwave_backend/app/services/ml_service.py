@@ -8,6 +8,8 @@ import joblib
 import numpy as np
 import pandas as pd
 
+from app.core.config import settings
+
 
 class VARModelService:
     """
@@ -26,16 +28,30 @@ class VARModelService:
         training_data_path: Path | None = None,
     ) -> None:
         project_root = Path(__file__).resolve().parents[3]
-        self.model_path = model_path or project_root / "ml_engine" / "shockwave_var_model.pkl"
-        self.training_data_path = (
-            training_data_path or project_root / "ml_engine" / "shockwave_training_data.csv"
+        self.model_path = model_path or self._resolve_existing_path(
+            project_root / "ml_engine" / "artifacts" / "models" / "shockwave_var_model.pkl",
+            project_root / "ml_engine" / "shockwave_var_model.pkl",
         )
+        self.training_data_path = training_data_path or self._resolve_existing_path(
+            project_root / "ml_engine" / "data" / "processed" / "shockwave_modeling_frame.csv",
+            project_root / "ml_engine" / "shockwave_training_data.csv",
+        )
+        self.use_mock_model = False
+
+        self.eia_column = "eia_brent_price"
+        self.natgas_column = "eia_natural_gas_price"
+        self.import_column = "doeb_import_volume"
+        self.diesel_column = "doeb_diesel_sales"
 
         if not self.model_path.exists():
-            raise FileNotFoundError(
-                f"VAR model artifact not found at {self.model_path}. "
-                "Train the model before starting the API."
-            )
+            if not settings.allow_mock_model:
+                raise FileNotFoundError(
+                    f"VAR model artifact not found at {self.model_path}. "
+                    "Train the model before starting the API."
+                )
+
+            self._configure_mock_mode()
+            return
 
         self.model_bundle: dict[str, Any] = joblib.load(self.model_path)
         self.var_results = self.model_bundle["var_results"]
@@ -55,11 +71,6 @@ class VARModelService:
         ]
         self.raw_history = self._load_raw_history()
 
-        self.eia_column = "eia_brent_price"
-        self.natgas_column = "eia_natural_gas_price"
-        self.import_column = "doeb_import_volume"
-        self.diesel_column = "doeb_diesel_sales"
-
         missing_columns = {
             column
             for column in (self.eia_column, self.import_column, self.diesel_column)
@@ -70,6 +81,74 @@ class VARModelService:
                 "The VAR artifact is missing expected variables: "
                 f"{', '.join(sorted(missing_columns))}"
             )
+
+    @staticmethod
+    def _resolve_existing_path(primary: Path, fallback: Path) -> Path:
+        return primary if primary.exists() else fallback
+
+    def _configure_mock_mode(self) -> None:
+        self.use_mock_model = True
+        self.model_bundle = {
+            "model_status": "mock_ready",
+            "leading_relationships": [],
+            "lag_metadata": {"mode": "mock", "reason": "artifact_missing"},
+        }
+        self.var_results = None
+        self.selected_lag = 3
+        self.is_differenced = False
+        self.train_columns = [
+            self.eia_column,
+            self.natgas_column,
+            self.import_column,
+            self.diesel_column,
+        ]
+        self.train_std = {column: 1.0 for column in self.train_columns}
+        self.leading_indicators = [self.eia_column, self.natgas_column]
+        self.target_variables = [self.import_column, self.diesel_column]
+        self.raw_history = None
+
+    def _simulate_mock_shock(self, shock_percentage: float, steps: int) -> dict[str, Any]:
+        forecast_index = self._build_forecast_index(steps)
+        baseline_import = 90.0
+        baseline_diesel = 66.0
+        import_drop_scale = 0.11
+        diesel_drop_scale = 0.07
+        lag_curve = np.array([1 - np.exp(-(idx + 1) / 2.8) for idx in range(steps)])
+
+        results: list[dict[str, Any]] = []
+        for idx, timestamp in enumerate(forecast_index):
+            seasonality = np.sin((idx + 1) * np.pi / 6)
+            baseline_import_volume = baseline_import + (1.8 * seasonality) + (0.35 * idx)
+            baseline_diesel_sales = baseline_diesel + (1.3 * seasonality) + (0.22 * idx)
+
+            import_delta = -(shock_percentage * import_drop_scale * lag_curve[idx])
+            diesel_delta = -(shock_percentage * diesel_drop_scale * lag_curve[idx])
+
+            results.append(
+                {
+                    "month": timestamp.date(),
+                    "baseline_doeb_import_volume": round(float(baseline_import_volume), 4),
+                    "shocked_doeb_import_volume": round(float(baseline_import_volume + import_delta), 4),
+                    "delta_doeb_import_volume": round(float(import_delta), 4),
+                    "baseline_doeb_diesel_sales": round(float(baseline_diesel_sales), 4),
+                    "shocked_doeb_diesel_sales": round(float(baseline_diesel_sales + diesel_delta), 4),
+                    "delta_doeb_diesel_sales": round(float(diesel_delta), 4),
+                }
+            )
+
+        forecast_df = pd.DataFrame(results)
+        critical_row = forecast_df.loc[forecast_df["delta_doeb_import_volume"].idxmin()]
+        return {
+            "leading_indicators": self.leading_indicators,
+            "summary": {
+                "critical_month": critical_row["month"],
+                "max_drop_import_volume": round(float(forecast_df["delta_doeb_import_volume"].min()), 4),
+                "max_drop_diesel_sales": round(float(forecast_df["delta_doeb_diesel_sales"].min()), 4),
+                "shock_transmission_method": "Mock lag simulator",
+                "selected_lag_months": self.selected_lag,
+            },
+            "forecasts": results,
+        }
 
     def _load_raw_history(self) -> pd.DataFrame | None:
         if not self.training_data_path.exists():
@@ -158,6 +237,8 @@ class VARModelService:
     def simulate_shock(self, shock_percentage: float, steps: int) -> dict[str, Any]:
         if steps < 1:
             raise ValueError("Forecast steps must be at least 1.")
+        if self.use_mock_model:
+            return self._simulate_mock_shock(shock_percentage, steps)
 
         baseline_forecast = self._build_baseline_model_forecast(steps)
         irf_adjustment = self._build_irf_shock_adjustment(shock_percentage, steps)
@@ -207,12 +288,11 @@ class VARModelService:
     def get_health_status(self) -> dict[str, Any]:
         return {
             "status": self.model_bundle.get("model_status", "ready"),
-            "artifact_path": str(self.model_path),
-            "training_data_path": str(self.training_data_path),
             "selected_lag_months": self.selected_lag,
             "leading_indicators": self.leading_indicators,
             "target_variables": self.target_variables,
             "is_differenced": self.is_differenced,
+            "mock_mode": self.use_mock_model,
         }
 
     def get_model_metadata(self) -> dict[str, Any]:
@@ -220,7 +300,9 @@ class VARModelService:
         lag_metadata = self.model_bundle.get("lag_metadata", {})
         return {
             "selected_lag_months": self.selected_lag,
-            "shock_transmission_method": "Impulse Response Function (IRF)",
+            "shock_transmission_method": (
+                "Mock lag simulator" if self.use_mock_model else "Impulse Response Function (IRF)"
+            ),
             "leading_indicators": self.leading_indicators,
             "target_variables": self.target_variables,
             "granger_relationships": granger_summary,

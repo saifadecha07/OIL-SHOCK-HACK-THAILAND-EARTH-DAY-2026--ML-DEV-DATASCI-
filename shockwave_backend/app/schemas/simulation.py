@@ -6,6 +6,8 @@ from pydantic import BaseModel, Field
 class SimulationRequest(BaseModel):
     eia_price_shock_percentage: float = Field(
         ...,
+        ge=-100.0,
+        le=100.0,
         description="Percentage shock applied to the EIA Brent price series.",
         examples=[10.0, -7.5],
     )
@@ -37,12 +39,11 @@ class SimulationSummary(BaseModel):
 
 class ModelHealthResponse(BaseModel):
     status: str
-    artifact_path: str
-    training_data_path: str
     selected_lag_months: int
     leading_indicators: list[str]
     target_variables: list[str]
     is_differenced: bool
+    mock_mode: bool
 
 
 class ModelMetadataResponse(BaseModel):

@@ -10,13 +10,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
+RUN useradd --create-home --shell /usr/sbin/nologin appuser
+
 COPY shockwave_backend/requirements.txt /tmp/requirements.txt
 RUN pip install --upgrade pip && pip install -r /tmp/requirements.txt
 
 COPY shockwave_backend /app/shockwave_backend
 COPY ml_engine /app/ml_engine
 
+RUN chown -R appuser:appuser /app
+
 WORKDIR /app/shockwave_backend
+
+USER appuser
 
 EXPOSE 8000
 

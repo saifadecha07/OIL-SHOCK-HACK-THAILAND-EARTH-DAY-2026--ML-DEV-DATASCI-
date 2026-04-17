@@ -365,6 +365,7 @@ input[type="range"] {
 
 .chart-frame {
   min-height: 380px;
+  overflow: hidden;
 }
 
 .empty-state {
