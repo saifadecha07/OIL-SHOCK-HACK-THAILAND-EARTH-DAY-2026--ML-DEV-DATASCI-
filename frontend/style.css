@@ -426,6 +426,40 @@ th {
   font-weight: 700;
 }
 
+.tab-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.tab-btn {
+  padding: 10px 22px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: "IBM Plex Sans", sans-serif;
+}
+
+.tab-btn.active {
+  background: var(--text);
+  color: #fff;
+  border-color: var(--text);
+}
+
+.tab-btn:hover:not(.active) {
+  background: var(--panel-strong);
+  color: var(--text);
+}
+
+.mape-good {
+  color: var(--teal);
+}
+
 @media (max-width: 1200px) {
   .page-shell {
     grid-template-columns: 1fr;

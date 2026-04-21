@@ -45,116 +45,215 @@
           </div>
         </div>
 
+        <div class="control-group">
+          <label for="delayRange" class="control-label">Shock Transmission Delay (Months)</label>
+          <div class="range-row">
+            <input id="delayRange" type="range" min="0" max="6" value="0" step="1">
+            <span id="delayValue" class="range-value">0</span>
+          </div>
+        </div>
+
         <button id="runButton" class="run-button">Run Simulation</button>
 
         <div class="side-note">
-          <div class="side-note-title">Hidden Lag Time</div>
+          <div class="side-note-title">Transmission Delay</div>
           <p>
-            Oil price shocks often do not hit field operations immediately. The value comes from seeing
-            the delayed impact window before it becomes visible in imports and downstream demand.
+            Simulates a policy buffer — e.g. strategic reserves or hedging — that delays when the Brent
+            shock begins affecting imports and downstream demand.
           </p>
         </div>
       </section>
     </aside>
 
     <main class="main-stage">
-      <section class="hero-panel">
-        <div class="hero-kicker">National Data Science Hackathon Pitch View</div>
-        <div class="hero-grid">
-          <div>
-            <h2 class="hero-title">Oil Shock Scenario Intelligence Dashboard</h2>
-            <p class="hero-copy">
-              SHOCKWAVE translates macro energy volatility into an early warning signal for energy planners.
-              The system models how a Brent shock propagates through a hidden lag window and impacts
-              crude import volume and diesel sales over the next several months.
-            </p>
-          </div>
-          <div class="hero-highlight">
-            <div class="hero-highlight-label">Core Signal</div>
-            <div class="hero-highlight-value">Brent Shock -> Lagged DOEB Response</div>
-            <div id="modelMetaText" class="hero-highlight-subtext">Scenario engine powered by VAR-based forecasting</div>
-          </div>
-        </div>
-      </section>
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="simulator">Scenario Simulator</button>
+        <button class="tab-btn" data-tab="backtest">Model Backtest</button>
+      </div>
 
-      <section class="metrics-grid">
-        <article class="metric-card">
-          <div class="metric-label">Max Drop in Import Volume</div>
-          <div id="maxDropValue" class="metric-value">-</div>
-          <div id="maxDropSubtext" class="metric-subtext">Run a simulation</div>
-        </article>
-        <article class="metric-card">
-          <div class="metric-label">Critical Month (Lag Time)</div>
-          <div id="criticalMonthValue" class="metric-value">-</div>
-          <div id="criticalMonthSubtext" class="metric-subtext">Delayed stress window</div>
-        </article>
-        <article class="metric-card">
-          <div class="metric-label">Shock Severity</div>
-          <div id="shockSeverityValue" class="metric-value">-</div>
-          <div id="shockSeveritySubtext" class="metric-subtext">Awaiting scenario</div>
-        </article>
-      </section>
-
-      <section id="statusBanner" class="status-banner info">
-        Configure the scenario from the left panel, then run the simulation.
-      </section>
-
-      <section class="charts-grid">
-        <article class="chart-card">
-          <div class="card-header">
+      <div id="simulatorView">
+        <section class="hero-panel">
+          <div class="hero-kicker">National Data Science Hackathon Pitch View</div>
+          <div class="hero-grid">
             <div>
-              <div class="section-label">Forecast 01</div>
-              <h3 class="card-title">Crude Oil Import Volume</h3>
+              <h2 class="hero-title">Oil Shock Scenario Intelligence Dashboard</h2>
+              <p class="hero-copy">
+                SHOCKWAVE translates macro energy volatility into an early warning signal for energy planners.
+                The system models how a Brent shock propagates through a hidden lag window and impacts
+                crude import volume and diesel sales over the next several months.
+              </p>
+            </div>
+            <div class="hero-highlight">
+              <div class="hero-highlight-label">Core Signal</div>
+              <div class="hero-highlight-value">Brent Shock -> Lagged DOEB Response</div>
+              <div id="modelMetaText" class="hero-highlight-subtext">Scenario engine powered by VAR-based forecasting</div>
             </div>
           </div>
-          <div id="importChart" class="chart-frame empty-state">
-            <div class="empty-title">No simulation yet</div>
-            <div class="empty-copy">Import volume forecast will appear here.</div>
-          </div>
-        </article>
+        </section>
 
-        <article class="chart-card">
+        <section class="metrics-grid">
+          <article class="metric-card">
+            <div class="metric-label">Max Drop in Import Volume</div>
+            <div id="maxDropValue" class="metric-value">-</div>
+            <div id="maxDropSubtext" class="metric-subtext">Run a simulation</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">Critical Month (Lag Time)</div>
+            <div id="criticalMonthValue" class="metric-value">-</div>
+            <div id="criticalMonthSubtext" class="metric-subtext">Delayed stress window</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">Shock Severity</div>
+            <div id="shockSeverityValue" class="metric-value">-</div>
+            <div id="shockSeveritySubtext" class="metric-subtext">Awaiting scenario</div>
+          </article>
+        </section>
+
+        <section id="statusBanner" class="status-banner info">
+          Configure the scenario from the left panel, then run the simulation.
+        </section>
+
+        <section class="charts-grid">
+          <article class="chart-card">
+            <div class="card-header">
+              <div>
+                <div class="section-label">Forecast 01</div>
+                <h3 class="card-title">Crude Oil Import Volume</h3>
+              </div>
+            </div>
+            <div id="importChart" class="chart-frame empty-state">
+              <div class="empty-title">No simulation yet</div>
+              <div class="empty-copy">Import volume forecast will appear here.</div>
+            </div>
+          </article>
+
+          <article class="chart-card">
+            <div class="card-header">
+              <div>
+                <div class="section-label">Forecast 02</div>
+                <h3 class="card-title">Diesel Sales Response</h3>
+              </div>
+            </div>
+            <div id="dieselChart" class="chart-frame empty-state">
+              <div class="empty-title">No simulation yet</div>
+              <div class="empty-copy">Diesel sales forecast will appear here.</div>
+            </div>
+          </article>
+        </section>
+
+        <section class="table-card">
           <div class="card-header">
             <div>
-              <div class="section-label">Forecast 02</div>
-              <h3 class="card-title">Diesel Sales Response</h3>
+              <div class="section-label">Analyst View</div>
+              <h3 class="card-title">Scenario Forecast Table</h3>
             </div>
           </div>
-          <div id="dieselChart" class="chart-frame empty-state">
-            <div class="empty-title">No simulation yet</div>
-            <div class="empty-copy">Diesel sales forecast will appear here.</div>
+          <div class="table-wrap">
+            <table id="forecastTable">
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Baseline Import</th>
+                  <th>Shocked Import</th>
+                  <th>Delta Import</th>
+                  <th>Baseline Diesel</th>
+                  <th>Shocked Diesel</th>
+                  <th>Delta Diesel</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="7" class="table-empty">No scenario results yet.</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-        </article>
-      </section>
+        </section>
+      </div>
 
-      <section class="table-card">
-        <div class="card-header">
-          <div>
-            <div class="section-label">Analyst View</div>
-            <h3 class="card-title">Scenario Forecast Table</h3>
+      <div id="backtestView" style="display:none">
+        <section class="hero-panel">
+          <div class="hero-kicker">Model Validation</div>
+          <div class="hero-grid">
+            <div>
+              <h2 class="hero-title">Out-of-Sample Backtest</h2>
+              <p class="hero-copy">
+                The VAR model was trained on historical DOEB and EIA data through Dec 2025.
+                These predictions were made against Jan–Mar 2026 actuals — data the model never saw.
+              </p>
+            </div>
+            <div class="hero-highlight">
+              <div class="hero-highlight-label">Test Window</div>
+              <div class="hero-highlight-value">Jan – Mar 2026</div>
+              <div class="hero-highlight-subtext">3-step ahead out-of-sample forecast</div>
+            </div>
           </div>
-        </div>
-        <div class="table-wrap">
-          <table id="forecastTable">
-            <thead>
-              <tr>
-                <th>Month</th>
-                <th>Baseline Import</th>
-                <th>Shocked Import</th>
-                <th>Delta Import</th>
-                <th>Baseline Diesel</th>
-                <th>Shocked Diesel</th>
-                <th>Delta Diesel</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td colspan="7" class="table-empty">No scenario results yet.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+        </section>
+
+        <section class="metrics-grid" style="margin-top:22px">
+          <article class="metric-card">
+            <div class="metric-label">MAPE — Import Volume</div>
+            <div class="metric-value mape-good">2.95%</div>
+            <div class="metric-subtext">Mean Absolute Percentage Error</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">MAPE — Diesel Sales</div>
+            <div class="metric-value mape-good">1.20%</div>
+            <div class="metric-subtext">Mean Absolute Percentage Error</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">RMSE — Import / Diesel</div>
+            <div class="metric-value">3.06 / 1.42</div>
+            <div class="metric-subtext">Root Mean Squared Error (ML)</div>
+          </article>
+        </section>
+
+        <section class="charts-grid" style="margin-top:20px">
+          <article class="chart-card">
+            <div class="card-header">
+              <div>
+                <div class="section-label">Validation 01</div>
+                <h3 class="card-title">Import Volume — Actual vs Predicted</h3>
+              </div>
+            </div>
+            <div id="backtestImportChart" class="chart-frame"></div>
+          </article>
+          <article class="chart-card">
+            <div class="card-header">
+              <div>
+                <div class="section-label">Validation 02</div>
+                <h3 class="card-title">Diesel Sales — Actual vs Predicted</h3>
+              </div>
+            </div>
+            <div id="backtestDieselChart" class="chart-frame"></div>
+          </article>
+        </section>
+
+        <section class="table-card" style="margin-top:20px">
+          <div class="card-header">
+            <div>
+              <div class="section-label">Validation Data</div>
+              <h3 class="card-title">Prediction vs Actual</h3>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Actual Import (ML)</th>
+                  <th>Predicted Import (ML)</th>
+                  <th>Abs Error</th>
+                  <th>Actual Diesel (ML)</th>
+                  <th>Predicted Diesel (ML)</th>
+                  <th>Abs Error</th>
+                </tr>
+              </thead>
+              <tbody id="backtestTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
     </main>
   </div>
 
