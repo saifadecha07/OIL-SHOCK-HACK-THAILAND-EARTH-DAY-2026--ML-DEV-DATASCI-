@@ -17,10 +17,11 @@ app = FastAPI(
 
 frontend_dir = Path(__file__).resolve().parents[2] / "frontend"
 
+_cors_origins = settings.safe_cors_origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.safe_cors_origins,
-    allow_credentials=True,
+    allow_origins=_cors_origins if _cors_origins else ["*"],
+    allow_credentials=bool(_cors_origins),
     allow_methods=["*"],
     allow_headers=["*"],
 )
