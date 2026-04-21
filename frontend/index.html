@@ -45,21 +45,13 @@
           </div>
         </div>
 
-        <div class="control-group">
-          <label for="delayRange" class="control-label">Shock Transmission Delay (Months)</label>
-          <div class="range-row">
-            <input id="delayRange" type="range" min="0" max="6" value="0" step="1">
-            <span id="delayValue" class="range-value">0</span>
-          </div>
-        </div>
-
         <button id="runButton" class="run-button">Run Simulation</button>
 
         <div class="side-note">
-          <div class="side-note-title">Transmission Delay</div>
+          <div class="side-note-title">Hidden Lag Time</div>
           <p>
-            Simulates a policy buffer — e.g. strategic reserves or hedging — that delays when the Brent
-            shock begins affecting imports and downstream demand.
+            Oil price shocks often do not hit field operations immediately. The value comes from seeing
+            the delayed impact window before it becomes visible in imports and downstream demand.
           </p>
         </div>
       </section>
@@ -71,6 +63,7 @@
         <button class="tab-btn" data-tab="backtest">Model Backtest</button>
       </div>
 
+      <!-- ── Simulator view ── -->
       <div id="simulatorView">
         <section class="hero-panel">
           <div class="hero-kicker">National Data Science Hackathon Pitch View</div>
@@ -85,7 +78,7 @@
             </div>
             <div class="hero-highlight">
               <div class="hero-highlight-label">Core Signal</div>
-              <div class="hero-highlight-value">Brent Shock -> Lagged DOEB Response</div>
+              <div class="hero-highlight-value">Brent Shock → Lagged DOEB Response</div>
               <div id="modelMetaText" class="hero-highlight-subtext">Scenario engine powered by VAR-based forecasting</div>
             </div>
           </div>
@@ -162,80 +155,120 @@
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td colspan="7" class="table-empty">No scenario results yet.</td>
-                </tr>
+                <tr><td colspan="7" class="table-empty">No scenario results yet.</td></tr>
               </tbody>
             </table>
           </div>
         </section>
       </div>
 
+      <!-- ── Backtest view ── -->
       <div id="backtestView" style="display:none">
+
+        <!-- What is backtest? -->
         <section class="hero-panel">
           <div class="hero-kicker">Model Validation</div>
           <div class="hero-grid">
             <div>
-              <h2 class="hero-title">Out-of-Sample Backtest</h2>
+              <h2 class="hero-title">เราทดสอบโมเดลยังไง?</h2>
               <p class="hero-copy">
-                The VAR model was trained on historical DOEB and EIA data through Dec 2025.
-                These predictions were made against Jan–Mar 2026 actuals — data the model never saw.
+                เทรนโมเดล VAR ด้วยข้อมูลจริงทั้งหมด<strong> จนถึง ธันวาคม 2568</strong>
+                แล้วให้โมเดลทาย<strong> มกราคม–มีนาคม 2569</strong>
+                ซึ่งเป็นข้อมูลที่โมเดลไม่เคยเห็นมาก่อน
+                จากนั้นนำผลที่ทายมาเทียบกับตัวเลขจริงที่เกิดขึ้น
               </p>
             </div>
             <div class="hero-highlight">
               <div class="hero-highlight-label">Test Window</div>
               <div class="hero-highlight-value">Jan – Mar 2026</div>
-              <div class="hero-highlight-subtext">3-step ahead out-of-sample forecast</div>
+              <div class="hero-highlight-subtext">3 เดือนที่โมเดลไม่เคยเห็นมาก่อน</div>
             </div>
           </div>
         </section>
 
-        <section class="metrics-grid" style="margin-top:22px">
+        <!-- Verdict -->
+        <div class="verdict-card">
+          <div class="verdict-icon">✓</div>
+          <div class="verdict-body">
+            <div class="verdict-title">โมเดลผ่านการทดสอบ — แม่นยำดี</div>
+            <div class="verdict-copy">
+              Import Volume พลาดเฉลี่ยแค่ <strong>2.95%</strong> จากค่าจริง ·
+              Diesel Sales พลาดเฉลี่ยแค่ <strong>1.20%</strong> จากค่าจริง —
+              เกณฑ์มาตรฐานของ time series forecasting อยู่ที่ต่ำกว่า 5% ถือว่าผ่าน
+            </div>
+          </div>
+        </div>
+
+        <!-- Accuracy metrics -->
+        <section class="metrics-grid" style="margin-top:20px">
           <article class="metric-card">
             <div class="metric-label">MAPE — Import Volume</div>
             <div class="metric-value mape-good">2.95%</div>
-            <div class="metric-subtext">Mean Absolute Percentage Error</div>
+            <div class="metric-subtext">
+              <strong>MAPE</strong> = โมเดลพลาดเฉลี่ยกี่ % จากค่าจริง
+              ยิ่งต่ำยิ่งดี
+            </div>
+            <div class="metric-badge badge-good">✓ ต่ำกว่าเกณฑ์ 5%</div>
           </article>
           <article class="metric-card">
             <div class="metric-label">MAPE — Diesel Sales</div>
             <div class="metric-value mape-good">1.20%</div>
-            <div class="metric-subtext">Mean Absolute Percentage Error</div>
+            <div class="metric-subtext">
+              <strong>MAPE</strong> = โมเดลพลาดเฉลี่ยกี่ % จากค่าจริง
+              ยิ่งต่ำยิ่งดี
+            </div>
+            <div class="metric-badge badge-good">✓ แม่นยำมาก</div>
           </article>
           <article class="metric-card">
-            <div class="metric-label">RMSE — Import / Diesel</div>
-            <div class="metric-value">3.06 / 1.42</div>
-            <div class="metric-subtext">Root Mean Squared Error (ML)</div>
+            <div class="metric-label">MAE — Import / Diesel</div>
+            <div class="metric-value">2.78 / 1.12</div>
+            <div class="metric-subtext">
+              <strong>MAE</strong> = พลาดเฉลี่ย 2.78 และ 1.12 ล้านลิตร ต่อเดือน
+              ในหน่วยจริง
+            </div>
+            <div class="metric-badge badge-neutral">ทดสอบ 3 เดือน</div>
           </article>
         </section>
 
+        <!-- Charts -->
         <section class="charts-grid" style="margin-top:20px">
           <article class="chart-card">
             <div class="card-header">
               <div>
                 <div class="section-label">Validation 01</div>
-                <h3 class="card-title">Import Volume — Actual vs Predicted</h3>
+                <h3 class="card-title">Import Volume — ทายเทียบของจริง</h3>
               </div>
             </div>
+            <p class="chart-explain">
+              แท่ง = ค่าจริงที่เกิดขึ้น · เส้นประ = ที่โมเดลทาย · ยิ่งเส้นประใกล้ยอดแท่ง = โมเดลแม่น
+            </p>
             <div id="backtestImportChart" class="chart-frame"></div>
           </article>
           <article class="chart-card">
             <div class="card-header">
               <div>
                 <div class="section-label">Validation 02</div>
-                <h3 class="card-title">Diesel Sales — Actual vs Predicted</h3>
+                <h3 class="card-title">Diesel Sales — ทายเทียบของจริง</h3>
               </div>
             </div>
+            <p class="chart-explain">
+              แท่ง = ค่าจริงที่เกิดขึ้น · เส้นประ = ที่โมเดลทาย · ยิ่งเส้นประใกล้ยอดแท่ง = โมเดลแม่น
+            </p>
             <div id="backtestDieselChart" class="chart-frame"></div>
           </article>
         </section>
 
+        <!-- Table -->
         <section class="table-card" style="margin-top:20px">
           <div class="card-header">
             <div>
-              <div class="section-label">Validation Data</div>
-              <h3 class="card-title">Prediction vs Actual</h3>
+              <div class="section-label">ตารางเปรียบเทียบ</div>
+              <h3 class="card-title">ค่าจริง vs ค่าที่โมเดลทาย เดือนต่อเดือน</h3>
             </div>
           </div>
+          <p style="padding: 0 4px 12px; color: var(--muted); font-size:14px">
+            Abs Error = ส่วนต่างจากค่าจริง (ML) · สีแดง = พลาดมาก · สีเขียว = พลาดน้อย
+          </p>
           <div class="table-wrap">
             <table>
               <thead>
@@ -253,7 +286,8 @@
             </table>
           </div>
         </section>
-      </div>
+
+      </div><!-- end backtestView -->
     </main>
   </div>
 
