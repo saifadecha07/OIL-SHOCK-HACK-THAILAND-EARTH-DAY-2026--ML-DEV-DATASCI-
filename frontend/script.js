@@ -8,8 +8,16 @@ function resolveApiBaseUrl() {
     return configuredBase.replace(/\/$/, "");
   }
 
-  const { protocol, hostname } = window.location;
-  return `${protocol}//${hostname}:8000`;
+  const { protocol, hostname, origin, port } = window.location;
+
+  if (
+    (hostname === "localhost" || hostname === "127.0.0.1") &&
+    (port === "8501" || port === "")
+  ) {
+    return `${protocol}//${hostname}:8000`;
+  }
+
+  return origin.replace(/\/$/, "");
 }
 
 const API_BASE_URL = resolveApiBaseUrl();
@@ -196,6 +204,7 @@ function baseLayout(title) {
       text: title,
       font: { family: "Space Grotesk, sans-serif", size: 22, color: "#1f1a17" },
     },
+    height: 380,
     paper_bgcolor: "rgba(0,0,0,0)",
     plot_bgcolor: "rgba(0,0,0,0)",
     margin: { l: 48, r: 20, t: 64, b: 50 },

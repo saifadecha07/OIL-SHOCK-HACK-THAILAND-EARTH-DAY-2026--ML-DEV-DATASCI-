@@ -9,7 +9,11 @@ class Settings(BaseSettings):
     project_name: str = "SHOCKWAVE Backend"
     api_v1_prefix: str = "/api/v1"
     debug: bool = False
+    app_env: str = Field("development", alias="APP_ENV")
+    port: int = Field(8000, alias="PORT")
     allow_mock_model: bool = Field(True, alias="ALLOW_MOCK_MODEL")
+    database_enabled: bool = Field(False, alias="DATABASE_ENABLED")
+    database_url: str | None = Field(None, alias="DATABASE_URL")
 
     postgres_server: str = Field("localhost", alias="POSTGRES_SERVER")
     postgres_port: int = Field(5432, alias="POSTGRES_PORT")
@@ -32,7 +36,13 @@ class Settings(BaseSettings):
 
     @computed_field
     @property
-    def sqlalchemy_database_uri(self) -> str:
+    def sqlalchemy_database_uri(self) -> str | None:
+        if not self.database_enabled:
+            return None
+
+        if self.database_url:
+            return self.database_url
+
         return (
             "postgresql+asyncpg://"
             f"{self.postgres_user}:{self.postgres_password}"

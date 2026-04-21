@@ -1,0 +1,22 @@
+{
+  "backtest_steps": 3,
+  "min_training_rows": 36,
+  "targets": [
+    "doeb_import_volume",
+    "doeb_diesel_sales"
+  ],
+  "test_window_start": "2026-01-01",
+  "test_window_end": "2026-03-01",
+  "metrics": {
+    "doeb_import_volume": {
+      "mae": 2.7801,
+      "rmse": 3.0557,
+      "mape": 2.954
+    },
+    "doeb_diesel_sales": {
+      "mae": 1.1174,
+      "rmse": 1.4241,
+      "mape": 1.2043
+    }
+  }
+}
