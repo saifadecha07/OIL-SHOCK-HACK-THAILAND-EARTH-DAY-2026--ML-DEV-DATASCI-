@@ -22,6 +22,8 @@ function resolveApiBaseUrl() {
 
 const API_BASE_URL = resolveApiBaseUrl();
 const API_URL = `${API_BASE_URL}/api/v1/simulate`;
+const HEALTH_URL = `${API_BASE_URL}/api/v1/simulate/health`;
+const READY_URL = `${API_BASE_URL}/ready`;
 
 const shockRange = document.getElementById("shockRange");
 const horizonRange = document.getElementById("horizonRange");
@@ -41,8 +43,8 @@ const shockSeveritySubtext = document.getElementById("shockSeveritySubtext");
 const importChart = document.getElementById("importChart");
 const dieselChart = document.getElementById("dieselChart");
 const forecastTableBody = document.querySelector("#forecastTable tbody");
-const HEALTH_URL = `${API_BASE_URL}/api/v1/simulate/health`;
-const READY_URL = `${API_BASE_URL}/ready`;
+
+let activeSimulation = null;
 
 shockRange.addEventListener("input", () => {
   shockValue.textContent = `${shockRange.value}%`;
@@ -52,13 +54,21 @@ horizonRange.addEventListener("input", () => {
   horizonValue.textContent = horizonRange.value;
 });
 
-runButton.addEventListener("click", async () => {
-  await runSimulation();
+runButton.addEventListener("click", () => {
+  runSimulation();
 });
 
 document.addEventListener("DOMContentLoaded", async () => {
   await loadModelHealth();
 });
+
+function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() =>
+    clearTimeout(id),
+  );
+}
 
 function setStatus(message, type = "info") {
   statusBanner.className = `status-banner ${type}`;
@@ -80,12 +90,8 @@ function formatMonth(dateString) {
   }).format(date);
 }
 
-function clearChartFrame(frame) {
-  frame.classList.remove("empty-state");
-  frame.innerHTML = "";
-}
-
 function renderChartEmptyState(frame, title, copy) {
+  Plotly.purge(frame);
   frame.classList.add("empty-state");
   frame.innerHTML = `
     <div>
@@ -104,29 +110,8 @@ function resetSummaryCards() {
   shockSeveritySubtext.textContent = "Awaiting scenario";
 }
 
-function computeInsights(forecasts, shockPercentage) {
-  const maxImportDrop = forecasts.reduce((lowest, row) => {
-    return row.delta_doeb_import_volume < lowest.delta_doeb_import_volume ? row : lowest;
-  }, forecasts[0]);
-
-  const criticalDieselDrop = forecasts.reduce((lowest, row) => {
-    return row.delta_doeb_diesel_sales < lowest.delta_doeb_diesel_sales ? row : lowest;
-  }, forecasts[0]);
-
-  maxDropValue.textContent = `${formatNumber(maxImportDrop.delta_doeb_import_volume)} ML`;
-  maxDropSubtext.textContent = formatMonth(maxImportDrop.month);
-
-  criticalMonthValue.textContent = formatMonth(criticalDieselDrop.month);
-  criticalMonthSubtext.textContent = "Peak downstream stress";
-
-  shockSeverityValue.textContent = `${shockPercentage}%`;
-  shockSeveritySubtext.textContent = "Brent scenario applied";
-}
-
 function applyApiSummary(summary, shockPercentage) {
-  if (!summary) {
-    return;
-  }
+  if (!summary) return;
 
   maxDropValue.textContent = `${formatNumber(summary.max_drop_import_volume)} ML`;
   maxDropSubtext.textContent = summary.shock_transmission_method;
@@ -138,64 +123,25 @@ function applyApiSummary(summary, shockPercentage) {
   shockSeveritySubtext.textContent = "Scenario applied";
 }
 
-function renderImportChart(forecasts) {
-  clearChartFrame(importChart);
-  const months = forecasts.map((row) => row.month);
+function computeInsights(forecasts, shockPercentage) {
+  const maxImportDrop = forecasts.reduce((lowest, row) =>
+    row.delta_doeb_import_volume < lowest.delta_doeb_import_volume ? row : lowest,
+    forecasts[0],
+  );
 
-  const traces = [
-    {
-      x: months,
-      y: forecasts.map((row) => row.baseline_doeb_import_volume),
-      mode: "lines+markers",
-      name: "Baseline Import Volume",
-      line: { color: "#0f766e", width: 4 },
-      marker: { size: 8 },
-    },
-    {
-      x: months,
-      y: forecasts.map((row) => row.shocked_doeb_import_volume),
-      mode: "lines+markers",
-      name: "Shocked Import Volume",
-      line: { color: "#d76634", width: 4 },
-      marker: { size: 8 },
-    },
-  ];
+  const criticalDieselDrop = forecasts.reduce((lowest, row) =>
+    row.delta_doeb_diesel_sales < lowest.delta_doeb_diesel_sales ? row : lowest,
+    forecasts[0],
+  );
 
-  Plotly.react(importChart, traces, baseLayout("Crude Oil Import Volume Forecast"), {
-    responsive: true,
-    displayModeBar: false,
-  });
-}
+  maxDropValue.textContent = `${formatNumber(maxImportDrop.delta_doeb_import_volume)} ML`;
+  maxDropSubtext.textContent = formatMonth(maxImportDrop.month);
 
-function renderDieselChart(forecasts) {
-  clearChartFrame(dieselChart);
-  const months = forecasts.map((row) => row.month);
+  criticalMonthValue.textContent = formatMonth(criticalDieselDrop.month);
+  criticalMonthSubtext.textContent = "Peak downstream stress";
 
-  const traces = [
-    {
-      x: months,
-      y: forecasts.map((row) => row.baseline_doeb_diesel_sales),
-      mode: "lines",
-      name: "Baseline Diesel Sales",
-      fill: "tozeroy",
-      line: { color: "#2049c9", width: 4 },
-      fillcolor: "rgba(32, 73, 201, 0.14)",
-    },
-    {
-      x: months,
-      y: forecasts.map((row) => row.shocked_doeb_diesel_sales),
-      mode: "lines",
-      name: "Shocked Diesel Sales",
-      fill: "tozeroy",
-      line: { color: "#9a6700", width: 4 },
-      fillcolor: "rgba(154, 103, 0, 0.16)",
-    },
-  ];
-
-  Plotly.react(dieselChart, traces, baseLayout("Diesel Sales Response Forecast"), {
-    responsive: true,
-    displayModeBar: false,
-  });
+  shockSeverityValue.textContent = `${shockPercentage}%`;
+  shockSeveritySubtext.textContent = "Brent scenario applied";
 }
 
 function baseLayout(title) {
@@ -226,6 +172,68 @@ function baseLayout(title) {
     },
     font: { family: "IBM Plex Sans, sans-serif", color: "#1f1a17" },
   };
+}
+
+function renderImportChart(forecasts) {
+  importChart.classList.remove("empty-state");
+  importChart.innerHTML = "";
+  const months = forecasts.map((row) => row.month);
+
+  const traces = [
+    {
+      x: months,
+      y: forecasts.map((row) => row.baseline_doeb_import_volume),
+      mode: "lines+markers",
+      name: "Baseline Import Volume",
+      line: { color: "#0f766e", width: 4 },
+      marker: { size: 8 },
+    },
+    {
+      x: months,
+      y: forecasts.map((row) => row.shocked_doeb_import_volume),
+      mode: "lines+markers",
+      name: "Shocked Import Volume",
+      line: { color: "#d76634", width: 4 },
+      marker: { size: 8 },
+    },
+  ];
+
+  Plotly.newPlot(importChart, traces, baseLayout("Crude Oil Import Volume Forecast"), {
+    responsive: true,
+    displayModeBar: false,
+  });
+}
+
+function renderDieselChart(forecasts) {
+  dieselChart.classList.remove("empty-state");
+  dieselChart.innerHTML = "";
+  const months = forecasts.map((row) => row.month);
+
+  const traces = [
+    {
+      x: months,
+      y: forecasts.map((row) => row.baseline_doeb_diesel_sales),
+      mode: "lines",
+      name: "Baseline Diesel Sales",
+      fill: "tozeroy",
+      line: { color: "#2049c9", width: 4 },
+      fillcolor: "rgba(32, 73, 201, 0.14)",
+    },
+    {
+      x: months,
+      y: forecasts.map((row) => row.shocked_doeb_diesel_sales),
+      mode: "lines",
+      name: "Shocked Diesel Sales",
+      fill: "tozeroy",
+      line: { color: "#9a6700", width: 4 },
+      fillcolor: "rgba(154, 103, 0, 0.16)",
+    },
+  ];
+
+  Plotly.newPlot(dieselChart, traces, baseLayout("Diesel Sales Response Forecast"), {
+    responsive: true,
+    displayModeBar: false,
+  });
 }
 
 function renderTable(forecasts) {
@@ -264,41 +272,49 @@ function resetDashboardState() {
 async function loadModelHealth() {
   try {
     const [readyResponse, response] = await Promise.all([
-      fetch(READY_URL),
-      fetch(HEALTH_URL),
+      fetchWithTimeout(READY_URL, {}, 10000),
+      fetchWithTimeout(HEALTH_URL, {}, 10000),
     ]);
 
-    if (!readyResponse.ok) {
-      throw new Error("Readiness check failed.");
-    }
-    if (!response.ok) {
-      throw new Error("Health check failed.");
-    }
+    if (!readyResponse.ok) throw new Error("Readiness check failed.");
+    if (!response.ok) throw new Error("Health check failed.");
 
     const readiness = await readyResponse.json();
     const health = await response.json();
-    const modelModeText = health.status === "mock_ready" ? "mock simulator" : "trained VAR";
+
+    const isMock = health.status === "mock_ready";
+    const modelModeText = isMock ? "mock simulator" : "trained VAR";
     modelMetaText.textContent =
       `Lag ${health.selected_lag_months} months | ${health.leading_indicators.join(", ")} | ` +
-      `${health.status === "mock_ready" ? modelModeText : `${health.is_differenced ? "differenced" : "level"} VAR`}`;
+      `${isMock ? modelModeText : `${health.is_differenced ? "differenced" : "level"} VAR`}`;
+
     setStatus(
-      health.status === "mock_ready"
-        ? `Backend is online in mock simulation mode. Database ${readiness.database.status}.`
+      isMock
+        ? `Backend online — mock simulation mode. Database ${readiness.database.status}.`
         : "Model is online and ready for simulation.",
       "success",
     );
   } catch (error) {
-    console.error(error);
+    const isTimeout = error.name === "AbortError";
     modelMetaText.textContent = "Backend model status unavailable";
     resetDashboardState();
     setStatus(
-      "Backend is not reachable yet. Start FastAPI first, then refresh this page.",
+      isTimeout
+        ? "Backend connection timed out. Check the Railway service is running."
+        : "Backend is not reachable. Start FastAPI first, then refresh this page.",
       "error",
     );
   }
 }
 
 async function runSimulation() {
+  if (activeSimulation) {
+    activeSimulation.abort();
+  }
+  activeSimulation = new AbortController();
+  const { signal } = activeSimulation;
+  const timeout = setTimeout(() => activeSimulation.abort(), 30000);
+
   const shockPercentage = Number(shockRange.value);
   const forecastMonths = Number(horizonRange.value);
 
@@ -309,19 +325,20 @@ async function runSimulation() {
   try {
     const response = await fetch(API_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         eia_price_shock_percentage: shockPercentage,
         forecast_months: forecastMonths,
       }),
+      signal,
     });
+
+    clearTimeout(timeout);
 
     if (!response.ok) {
       const errorPayload = await response.json().catch(async () => {
-        const errorText = await response.text();
-        return { detail: errorText || "Simulation request failed." };
+        const text = await response.text();
+        return { detail: text || "Simulation request failed." };
       });
       throw new Error(errorPayload.detail || "Simulation request failed.");
     }
@@ -337,20 +354,24 @@ async function runSimulation() {
     } else {
       computeInsights(forecasts, shockPercentage);
     }
+
     renderImportChart(forecasts);
     renderDieselChart(forecasts);
     renderTable(forecasts);
     setStatus("Simulation complete. Scenario outputs updated successfully.", "success");
   } catch (error) {
+    clearTimeout(timeout);
+    if (error.name === "AbortError") {
+      setStatus("Simulation timed out (30s). Check Railway backend connection.", "error");
+      return;
+    }
     console.error(error);
     resetDashboardState();
-    setStatus(
-      `Unable to complete the simulation. ${error.message}`,
-      "error",
-    );
+    setStatus(`Unable to complete the simulation. ${error.message}`, "error");
   } finally {
     runButton.disabled = false;
     runButton.textContent = "Run Simulation";
+    activeSimulation = null;
   }
 }
 
