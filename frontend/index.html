@@ -61,6 +61,7 @@
       <div class="tab-bar">
         <button class="tab-btn active" data-tab="simulator">Scenario Simulator</button>
         <button class="tab-btn" data-tab="backtest">Model Backtest</button>
+        <button class="tab-btn" data-tab="crisis">Crisis 2026</button>
       </div>
 
       <!-- ── Simulator view ── -->
@@ -288,6 +289,88 @@
         </section>
 
       </div><!-- end backtestView -->
+
+      <!-- ── Crisis 2026 view ── -->
+      <div id="crisisView" style="display:none">
+
+        <section class="hero-panel">
+          <div class="hero-kicker">เหตุการณ์จริง — มีนาคม 2569</div>
+          <div class="hero-grid">
+            <div>
+              <h2 class="hero-title">Brent พุ่ง 45% ใน 1 เดือน</h2>
+              <p class="hero-copy">
+                กุมภาพันธ์ 2569 ราคา Brent อยู่ที่ <strong>$70.89</strong> —
+                แล้วมีนาคม 2569 พุ่งขึ้นเป็น <strong>$103.13</strong> ใน 1 เดือน
+                นี่คือตัวอย่าง oil shock จริงที่เกิดขึ้น และ SHOCKWAVE ถูกสร้างมาเพื่อเตือนก่อนที่ผลกระทบจะมาถึงปลายทาง
+              </p>
+            </div>
+            <div class="hero-highlight">
+              <div class="hero-highlight-label">Shock ขนาด</div>
+              <div class="hero-highlight-value" style="color:#d76634">+45.5%</div>
+              <div class="hero-highlight-subtext">$70.89 → $103.13 / barrel</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="metrics-grid" style="margin-top:20px">
+          <article class="metric-card">
+            <div class="metric-label">Brent ก่อน Shock (ก.พ. 2569)</div>
+            <div class="metric-value">$70.89</div>
+            <div class="metric-subtext">ราคาน้ำมันดิบปกติในช่วงต้นปี</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">Brent หลัง Shock (มี.ค. 2569)</div>
+            <div class="metric-value" style="color:#d76634">$103.13</div>
+            <div class="metric-subtext">พุ่งขึ้น $32.24 ภายใน 1 เดือน</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">ผลกระทบตามที่โมเดลพบ</div>
+            <div class="metric-value">Lag 12M</div>
+            <div class="metric-subtext">ผลกระทบจะส่งถึง Import และ Diesel ในอีก 12 เดือน</div>
+          </article>
+        </section>
+
+        <section class="charts-grid" style="margin-top:20px">
+          <article class="chart-card">
+            <div class="card-header">
+              <div>
+                <div class="section-label">Timeline 01</div>
+                <h3 class="card-title">ราคา Brent 2024–2026</h3>
+              </div>
+            </div>
+            <p class="chart-explain">
+              โซนสีแดง = ช่วงที่ราคาพุ่งขึ้นกะทันหัน · ราคาก่อนหน้าคือ "baseline" ที่โมเดลใช้ทำนาย
+            </p>
+            <div id="crisisBrentChart" class="chart-frame"></div>
+          </article>
+          <article class="chart-card">
+            <div class="card-header">
+              <div>
+                <div class="section-label">Timeline 02</div>
+                <h3 class="card-title">Import Volume & Diesel Sales 2024–2026</h3>
+              </div>
+            </div>
+            <p class="chart-explain">
+              ดูแนวโน้มก่อน shock — ผลกระทบจะตามมาในอีกหลายเดือนหลังจาก Brent พุ่ง
+            </p>
+            <div id="crisisDownstreamChart" class="chart-frame"></div>
+          </article>
+        </section>
+
+        <div class="crisis-cta-card">
+          <div class="crisis-cta-body">
+            <div class="crisis-cta-title">โมเดลทำนายว่าจะเกิดอะไรต่อจากนี้?</div>
+            <p class="crisis-cta-copy">
+              Shock ขนาด 45% กำลังซึมเข้าระบบ — กด Run เพื่อดูว่า Import Volume และ Diesel Sales
+              ของไทยจะถูกกระทบแค่ไหนในอีก 12 เดือนข้างหน้า
+            </p>
+          </div>
+          <button id="crisisRunBtn" class="run-button" style="width:auto;padding:16px 32px;white-space:nowrap">
+            Run 45% Shock Scenario →
+          </button>
+        </div>
+
+      </div><!-- end crisisView -->
     </main>
   </div>
 

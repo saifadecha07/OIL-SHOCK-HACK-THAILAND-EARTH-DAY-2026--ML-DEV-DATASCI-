@@ -49,6 +49,37 @@ const BACKTEST_PREDICTIONS = [
   },
 ];
 
+// ── Crisis 2026 data (Jan 2024 – Mar 2026) ──
+const CRISIS_HISTORY = [
+  { month: "2024-01-01", brent: 80.12, import_vol: 90.49, diesel: 88.83 },
+  { month: "2024-02-01", brent: 83.48, import_vol: 92.50, diesel: 92.87 },
+  { month: "2024-03-01", brent: 85.41, import_vol: 91.36, diesel: 89.08 },
+  { month: "2024-04-01", brent: 89.94, import_vol: 93.28, diesel: 87.16 },
+  { month: "2024-05-01", brent: 81.75, import_vol: 91.88, diesel: 84.88 },
+  { month: "2024-06-01", brent: 82.25, import_vol: 91.37, diesel: 84.95 },
+  { month: "2024-07-01", brent: 85.15, import_vol: 91.76, diesel: 83.80 },
+  { month: "2024-08-01", brent: 80.36, import_vol: 89.14, diesel: 85.10 },
+  { month: "2024-09-01", brent: 74.02, import_vol: 84.78, diesel: 82.35 },
+  { month: "2024-10-01", brent: 75.63, import_vol: 83.69, diesel: 83.94 },
+  { month: "2024-11-01", brent: 74.35, import_vol: 87.04, diesel: 86.93 },
+  { month: "2024-12-01", brent: 73.86, import_vol: 87.34, diesel: 90.64 },
+  { month: "2025-01-01", brent: 79.27, import_vol: 90.17, diesel: 92.74 },
+  { month: "2025-02-01", brent: 75.44, import_vol: 94.29, diesel: 90.54 },
+  { month: "2025-03-01", brent: 72.73, import_vol: 96.36, diesel: 89.37 },
+  { month: "2025-04-01", brent: 68.13, import_vol: 93.72, diesel: 86.93 },
+  { month: "2025-05-01", brent: 64.45, import_vol: 88.89, diesel: 83.61 },
+  { month: "2025-06-01", brent: 71.44, import_vol: 92.38, diesel: 85.33 },
+  { month: "2025-07-01", brent: 71.04, import_vol: 91.56, diesel: 80.79 },
+  { month: "2025-08-01", brent: 67.87, import_vol: 91.10, diesel: 83.85 },
+  { month: "2025-09-01", brent: 67.99, import_vol: 90.41, diesel: 84.38 },
+  { month: "2025-10-01", brent: 64.54, import_vol: 83.49, diesel: 82.06 },
+  { month: "2025-11-01", brent: 63.80, import_vol: 87.50, diesel: 87.28 },
+  { month: "2025-12-01", brent: 62.54, import_vol: 90.97, diesel: 89.41 },
+  { month: "2026-01-01", brent: 66.60, import_vol: 89.79, diesel: 90.89 },
+  { month: "2026-02-01", brent: 70.89, import_vol: 96.57, diesel: 93.76 },
+  { month: "2026-03-01", brent: 103.13, import_vol: 95.94, diesel: 90.19 },
+];
+
 // ── DOM refs ──
 const shockRange    = document.getElementById("shockRange");
 const horizonRange  = document.getElementById("horizonRange");
@@ -76,15 +107,27 @@ horizonRange.addEventListener("input", () => { horizonValue.textContent = horizo
 runButton.addEventListener("click", () => { runSimulation(); });
 
 // ── Tab switching ──
-document.querySelectorAll(".tab-btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
-    btn.classList.add("active");
-    const tab = btn.dataset.tab;
-    document.getElementById("simulatorView").style.display = tab === "simulator" ? "" : "none";
-    document.getElementById("backtestView").style.display  = tab === "backtest"  ? "" : "none";
-    if (tab === "backtest") renderBacktest();
+function switchTab(tabName) {
+  document.querySelectorAll(".tab-btn").forEach((b) => {
+    b.classList.toggle("active", b.dataset.tab === tabName);
   });
+  document.getElementById("simulatorView").style.display = tabName === "simulator" ? "" : "none";
+  document.getElementById("backtestView").style.display  = tabName === "backtest"  ? "" : "none";
+  document.getElementById("crisisView").style.display    = tabName === "crisis"    ? "" : "none";
+  if (tabName === "backtest") renderBacktest();
+  if (tabName === "crisis")   renderCrisis();
+}
+
+document.querySelectorAll(".tab-btn").forEach((btn) => {
+  btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+});
+
+// CTA button — switch to simulator and pre-set shock to 45%
+document.getElementById("crisisRunBtn").addEventListener("click", () => {
+  shockRange.value = 45;
+  shockValue.textContent = "45%";
+  switchTab("simulator");
+  runSimulation();
 });
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -259,6 +302,97 @@ function renderBacktest() {
     `;
     tbody.appendChild(tr);
   });
+}
+
+// ── Crisis 2026 charts ──
+let crisisRendered = false;
+
+function renderCrisis() {
+  if (crisisRendered) return;
+  crisisRendered = true;
+
+  const months   = CRISIS_HISTORY.map((r) => r.month);
+  const plotCfg  = { responsive: true, displayModeBar: false };
+  const shockX   = "2026-03-01";
+
+  const crisisShape = {
+    type: "rect", xref: "x", yref: "paper",
+    x0: "2026-02-15", x1: "2026-03-15",
+    y0: 0, y1: 1,
+    fillcolor: "rgba(215,102,52,0.12)",
+    line: { width: 0 },
+  };
+
+  // Brent price chart
+  Plotly.newPlot(
+    document.getElementById("crisisBrentChart"),
+    [{
+      x: months,
+      y: CRISIS_HISTORY.map((r) => r.brent),
+      mode: "lines+markers",
+      name: "Brent Price (USD/barrel)",
+      line: { color: "#d76634", width: 3 },
+      marker: { size: 6 },
+    }],
+    {
+      ...baseLayout(""),
+      height: 340,
+      margin: { l: 48, r: 20, t: 40, b: 50 },
+      shapes: [crisisShape],
+      annotations: [{
+        x: shockX, y: 103.13,
+        text: "<b>SHOCK<br>+45%</b>",
+        showarrow: true, arrowhead: 2, arrowcolor: "#d76634",
+        ax: 40, ay: -40,
+        font: { color: "#d76634", size: 13 },
+        bgcolor: "rgba(255,248,238,0.9)",
+        bordercolor: "#d76634", borderwidth: 1, borderpad: 4,
+      }],
+      yaxis: { ...baseLayout("").yaxis, title: { text: "USD / barrel", font: { size: 12, color: "#655749" } } },
+    },
+    plotCfg,
+  );
+
+  // Import + Diesel downstream chart
+  Plotly.newPlot(
+    document.getElementById("crisisDownstreamChart"),
+    [
+      {
+        x: months,
+        y: CRISIS_HISTORY.map((r) => r.import_vol),
+        mode: "lines+markers",
+        name: "Import Volume (ML)",
+        line: { color: "#0f766e", width: 3 },
+        marker: { size: 6 },
+      },
+      {
+        x: months,
+        y: CRISIS_HISTORY.map((r) => r.diesel),
+        mode: "lines+markers",
+        name: "Diesel Sales (ML)",
+        line: { color: "#2049c9", width: 3, dash: "dot" },
+        marker: { size: 6 },
+      },
+    ],
+    {
+      ...baseLayout(""),
+      height: 340,
+      margin: { l: 48, r: 20, t: 40, b: 50 },
+      shapes: [crisisShape],
+      annotations: [{
+        x: shockX, y: 95.94,
+        text: "<b>Shock เพิ่งเกิด<br>ผลกระทบยังไม่มา</b>",
+        showarrow: true, arrowhead: 2, arrowcolor: "#655749",
+        ax: 50, ay: -50,
+        font: { color: "#655749", size: 12 },
+        bgcolor: "rgba(255,248,238,0.9)",
+        bordercolor: "#c8b89a", borderwidth: 1, borderpad: 4,
+      }],
+      yaxis: { ...baseLayout("").yaxis, title: { text: "ล้านลิตร (ML)", font: { size: 12, color: "#655749" } } },
+      legend: { orientation: "h", y: 1.18, x: 0, font: { family: "IBM Plex Sans, sans-serif", size: 12, color: "#655749" } },
+    },
+    plotCfg,
+  );
 }
 
 // ── Health check ──

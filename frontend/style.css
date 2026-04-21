@@ -517,6 +517,37 @@ th {
   color: var(--muted);
 }
 
+.crisis-cta-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 20px;
+  padding: 24px 28px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(215,102,52,0.1), rgba(141,54,23,0.08));
+  border: 1px solid rgba(215,102,52,0.25);
+}
+
+.crisis-cta-title {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent-dark);
+  margin-bottom: 8px;
+}
+
+.crisis-cta-copy {
+  color: var(--muted);
+  line-height: 1.6;
+  font-size: 15px;
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .crisis-cta-card { flex-direction: column; align-items: flex-start; }
+}
+
 .chart-explain {
   margin: 0 0 10px;
   padding: 0 4px;
