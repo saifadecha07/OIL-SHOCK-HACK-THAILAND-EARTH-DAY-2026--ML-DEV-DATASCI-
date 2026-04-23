@@ -1,3 +1,19 @@
+<div align="center">
+  <h1> WINNER: 1st Place </h1>
+  <h3>OIL SHOCK Hack! | THAILAND EARTH DAY 2026</h3>
+  <p>
+    <em>Proudly announcing that <strong>SHOCKWAVE</strong> was awarded First Prize in Track A: Planetary Signals Lab.</em><br>
+    <strong> Solo Competitor Achievement </strong><br>
+    <small>(Successfully developed end-to-end and won against teams of up to 10 members)</small>
+  </p>
+  
+  <img src="assets/certificate.png" alt="1st Place Certificate" width="800" style="border-radius: 10px; border: 1px solid #ddd; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"/>
+</div>
+
+<br>
+
+---
+
 # SHOCKWAVE
 
 SHOCKWAVE is a Track A competition prototype for `OIL SHOCK Hack! | THAILAND EARTH DAY 2026`.
@@ -30,7 +46,8 @@ It is a product-minded prototype that packages:
 
 This project should be framed as:
 
-- `Track A: Planetary Signals Lab`
+- `Track A: Planetary Signals Lab - 1st Place Winner`
+- **`Solo Development`** (Built end-to-end by a single developer in a competition allowing up to 10-person teams)
 - `early warning system`
 - `time-series analysis`
 - `interactive web dashboard`
@@ -144,47 +161,3 @@ There is also a Streamlit implementation in `frontend/app.py`, but the compose d
 
 ```bash
 docker compose run --rm ml-trainer python ml_engine/01b_generate_mock_doeb_data.py
-```
-
-6. Train the model and generate the backtest report:
-
-```bash
-docker compose run --rm ml-trainer python ml_engine/02_train_var_model.py
-```
-
-7. Start the app:
-
-```bash
-docker compose up --build
-```
-
-8. Open:
-   - Frontend: `http://localhost:8501`
-   - Backend health: `http://localhost:8000/health`
-   - Backend readiness: `http://localhost:8000/ready`
-   - Simulation endpoint: `http://localhost:8000/api/v1/simulate`
-
-## Current Strengths
-
-- clear product story for Track A
-- end-to-end repo from model to UI
-- lag-aware simulation framing
-- holdout backtest added to training
-- API + dashboard integration
-- Dockerized demo path
-- mock fallback mode for demo resilience
-
-## Current Limitations
-
-- still a prototype, not a production forecasting platform
-- current implementation is strongest on `EIA + DOEB`; `OWID + EPPO` are not fully integrated into the live path
-- probabilistic modeling and anomaly detection are still roadmap items
-- PostgreSQL is currently light in domain usage
-- repository hygiene still needs cleanup before public release
-
-## Notes
-
-- `.env` should remain local and should not be committed.
-- `.env.example` should contain placeholders only.
-- If the trained model artifact is missing, the backend can fall back to a deterministic mock mode for UI and API testing.
-- If the local DOEB files are missing during data generation, the pipeline can fall back to synthetic target generation for demo continuity. Be explicit about that during technical review.
