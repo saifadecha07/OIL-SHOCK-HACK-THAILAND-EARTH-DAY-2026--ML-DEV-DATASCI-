@@ -7,7 +7,7 @@
     <small>(Successfully developed end-to-end and won against teams of up to 10 members)</small>
   </p>
   
-  <img src="assets/certificate.png" alt="1st Place Certificate" width="800" style="border-radius: 10px; border: 1px solid #ddd; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"/>
+  <img src="[assets/certificate.png](https://github.com/user-attachments/assets/a447f225-6e25-486f-87e9-a0e130cbdd1b)" alt="1st Place Certificate" width="800" style="border-radius: 10px; border: 1px solid #ddd; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"/>
 </div>
 
 <br>
